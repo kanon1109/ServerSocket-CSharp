@@ -144,52 +144,6 @@ public class ServerSocket
     }
 
     /// <summary>
-    /// 接收socket消息
-    /// </summary>
-    /// <returns></returns>
-    /*private void receiveSocket()
-    {
-        
-        if (!this.socket.Connected)
-        {
-            MonoBehaviour.print("Failed to clientSocket server.");
-            this.socket.Close();
-        }
-        if (this.socket.Poll(-1, SelectMode.SelectRead) == true)
-        {
-            MonoBehaviour.print("receiveSocket socket.Available " + this.socket.Available);
-            while (this.socket.Available >= this.headSize)
-            {
-                //||---头---||-----内容-----||;
-                //读包头
-                if (this.bodyLength == 0)
-                {
-                    byte[] headBuffer = new byte[this.headSize];
-                    this.socket.Receive(headBuffer, 0, headBuffer.Length, SocketFlags.None);
-                    Buffer headByteArray = new Buffer();
-                    headByteArray.writeStream(new MemoryStream(headBuffer));
-                    this.bodyLength = headByteArray.readInt();
-                    MonoBehaviour.print("this.bodyLength " + this.bodyLength);
-                }
-                if (this.socket.Available < this.bodyLength)
-                {
-                    //缓冲区不足 讲读出的头还回去，并且跳出循环。
-                    break;
-                }
-                if (this.bodyLength > 0 && this.socket.Available >= this.bodyLength)
-                {
-                    //读包体
-                    byte[] bodyBuffer = new byte[this.bodyLength];
-                    this.socket.Receive(bodyBuffer, 0, this.bodyLength, SocketFlags.None);
-                    this.receiveCallback(new MemoryStream(bodyBuffer));
-                    this.bodyLength = 0;
-                }
-                MonoBehaviour.print("socket.Available " + this.socket.Available);
-            }
-        }
-    }*/
-
-    /// <summary>
     /// 接收回调
     /// </summary>
     /// <param name="ms">数据流</param>

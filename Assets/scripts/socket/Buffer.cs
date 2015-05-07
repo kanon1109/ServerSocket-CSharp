@@ -8,6 +8,7 @@ public class Buffer
     public Buffer()
     {
         this.ms = new MemoryStream();
+        this.ms.Position = 0;
     }
 
     /// <summary>
