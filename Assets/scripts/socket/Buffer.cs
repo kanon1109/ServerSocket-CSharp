@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Text;
-using UnityEngine;
 public class Buffer
 {
     //数据流
@@ -74,11 +73,9 @@ public class Buffer
     /// 读取一个字节
     /// </summary>
     /// <returns></returns>
-    public byte readBytes()
+    public int readBytes()
     {
-        Byte[] bytes = new Byte[1];
-        this.ms.Read(bytes, 0, 1);
-        return bytes[0];
+        return this.ms.ReadByte();
     }
 
     /// <summary>
@@ -129,20 +126,18 @@ public class Buffer
     public void wirteInt(int data)
     {
         Byte[] dataBytes = BitConverter.GetBytes(data);
-        MonoBehaviour.print("wirteInt" + dataBytes.Length);
         this.checkEndian(dataBytes);
         this.ms.Write(dataBytes, 0, dataBytes.Length);
     }
     
     /// <summary>
-    /// 写入一个byte
+    /// 写入一个Char
     /// </summary>
     /// <param name="data"></param>
     /// <returns></returns>
     public void writeChar(char data)
     {
         Byte[] dataBytes = BitConverter.GetBytes(data);
-        MonoBehaviour.print("writeChar" + dataBytes.Length);
         this.checkEndian(dataBytes);
         this.ms.Write(dataBytes, 0, dataBytes.Length);
     }
@@ -155,7 +150,6 @@ public class Buffer
     public void writeLong(long data)
     {
         Byte[] dataBytes = BitConverter.GetBytes(data);
-        MonoBehaviour.print("writeLong" + dataBytes.Length);
         this.checkEndian(dataBytes);
         this.ms.Write(dataBytes, 0, dataBytes.Length);
     }
@@ -168,7 +162,6 @@ public class Buffer
     public void writeShort(short data)
     {
         Byte[] dataBytes = BitConverter.GetBytes(data);
-        MonoBehaviour.print("writeShort" + dataBytes.Length);
         this.checkEndian(dataBytes);
         this.ms.Write(dataBytes, 0, dataBytes.Length);
     }
@@ -181,7 +174,6 @@ public class Buffer
     public void writeFloat(float data)
     {
         Byte[] dataBytes = BitConverter.GetBytes(data);
-        MonoBehaviour.print("writeFloat" + dataBytes.Length);
         this.checkEndian(dataBytes);
         this.ms.Write(dataBytes, 0, dataBytes.Length);
     }
@@ -194,7 +186,6 @@ public class Buffer
     public void writeDouble(double data)
     {
         Byte[] dataBytes = BitConverter.GetBytes(data);
-        MonoBehaviour.print("writeDouble" + dataBytes.Length);
         this.checkEndian(dataBytes);
         this.ms.Write(dataBytes, 0, dataBytes.Length);
     }
@@ -207,7 +198,6 @@ public class Buffer
     public void writeBool(bool data)
     {
         Byte[] dataBytes = BitConverter.GetBytes(data);
-        MonoBehaviour.print("writeBool" + dataBytes.Length);
         this.checkEndian(dataBytes);
         this.ms.Write(dataBytes, 0, dataBytes.Length);
     }
@@ -244,6 +234,16 @@ public class Buffer
     public void writeBytes(Byte[] bytes)
     {
         this.ms.Write(bytes, 0, bytes.Length);
+    }
+
+    /// <summary>
+    /// 写入一个byte
+    /// </summary>
+    /// <param name="i"></param>
+    /// <returns></returns>
+    public void writeByte(byte i)
+    {
+        this.ms.WriteByte(i);
     }
 
     //是否为空

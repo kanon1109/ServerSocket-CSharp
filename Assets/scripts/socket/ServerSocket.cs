@@ -17,6 +17,14 @@ public class ServerSocket
     private int headSize = 4;
     //包体的长度
     private int bodyLength = 0;
+    //计时器
+    private System.Timers.Timer timer = null;
+    //重连间隔时间
+    private double reconnetDelay = 15000;
+    //socket连接成功
+    public static String CONNECTED = "connected";
+    //socket连接关闭
+    public static String DISCONNECT = "disconnect";
     public ServerSocket()
     {
         
@@ -28,7 +36,7 @@ public class ServerSocket
     /// <param name="host">ip</param>
     /// <param name="port">端口</param>
     /// <returns></returns>
-    public void connectServer(String host, int port)
+    public void connect(String host, int port)
     {
         this.host = host;
         this.port = port;
@@ -37,31 +45,7 @@ public class ServerSocket
         IPAddress address = IPAddress.Parse(host);
         IPEndPoint endpoint = new IPEndPoint(address, port);
         //异步连接,连接成功调用connectCallback方法  
-        IAsyncResult result = socket.BeginConnect(endpoint, new AsyncCallback(connectCallback), this.socket);
-        //这里做一个超时的监测，当连接超过5秒还没成功表示超时  
-        bool success = result.AsyncWaitHandle.WaitOne(5000, true);
-        if (!success)
-        {
-            //超时  
-            MonoBehaviour.print("connect Time Out");
-        }
-        StateObject so = new StateObject();
-        so.socket = this.socket;
-        //与socket建立连接成功建立监听
-        this.socket.BeginReceive(so.buffer, 0, StateObject.BUFFER_SIZE, 0, new AsyncCallback(receiveSocketHandler), so);
-        /*else
-        {
-            Thread thread = new Thread(new ThreadStart(receiveSocket));
-            thread.IsBackground = true;
-            thread.Start();  
-        }*/
-        //this.receiveSocket();
-        //this.socket.Connect(endpoint);
-        /*if (this.socket.Connected)
-        {
-            MonoBehaviour.print("Connected");
-            this.receiveSocket();
-        }*/
+        this.socket.BeginConnect(endpoint, new AsyncCallback(connectCallback), this.socket);
     }
 
     private void receiveSocketHandler(IAsyncResult ar)
@@ -70,22 +54,36 @@ public class ServerSocket
         Socket socket = so.socket;
         if (!socket.Connected)
         {
-            MonoBehaviour.print("Failed to clientSocket server.");
-            socket.Close();
-        }
-        int read = socket.EndReceive(ar);
-        //如果不足包头的长度
-        if (read < this.headSize)
-        {
+            MonoBehaviour.print("socket断开");
+            NotificationCenter.getInstance().postNotification(DISCONNECT);
+            this.disconnect();
+            this.startReconnetTimer();
+            return;
         }
         if (socket.Poll(-1, SelectMode.SelectRead) == true)
         {
+            int read = socket.EndReceive(ar);
+            if (read == 0)
+            {
+                //socket 断开
+                MonoBehaviour.print("socket断开");
+                NotificationCenter.getInstance().postNotification(DISCONNECT);
+                this.disconnect();
+                this.startReconnetTimer();
+                return;
+            }
+            //如果不足包头的长度
+            if (read < this.headSize)
+            {
+
+            }
             //socket.Available 这里的缓冲区长度是去掉头部后的长度
-            //MonoBehaviour.print("read " + read);
-            MonoBehaviour.print("socket.Available " + socket.Available);
-            Buffer buffer = new Buffer();
-            buffer.writeStream(new MemoryStream(so.buffer));
-            this.bodyLength = buffer.readInt();
+            if (this.bodyLength == 0)
+            {
+                Buffer buffer = new Buffer();
+                buffer.writeStream(new MemoryStream(so.buffer));
+                this.bodyLength = buffer.readInt();
+            }
             while (socket.Available > 0)
             {
                 //||---头---||-----内容-----||;
@@ -128,8 +126,21 @@ public class ServerSocket
     {
         //结束挂起的异步连接请求。
         Socket socket = (Socket)ar.AsyncState;
+        MonoBehaviour.print("socket.Connected " + socket.Connected);
+        if (!socket.Connected)
+        {
+            //尝试重连
+            this.startReconnetTimer();
+        }
+        else
+        {
+            NotificationCenter.getInstance().postNotification(CONNECTED);
+            StateObject so = new StateObject();
+            so.socket = this.socket;
+            //与socket建立连接成功建立监听
+            this.socket.BeginReceive(so.buffer, 0, StateObject.BUFFER_SIZE, 0, new AsyncCallback(receiveSocketHandler), so);
+        }
         socket.EndConnect(ar);
-        MonoBehaviour.print("connect success");
     }
 
     /// <summary>
@@ -221,11 +232,32 @@ public class ServerSocket
     /// 关闭socket
     /// </summary>
     /// <returns></returns>
-    public void close()
+    public void disconnect()
     {
         if (this.socket != null &&
             this.socket.Connected)
-            this.socket.Close();
+            this.socket.Disconnect(true);
+    }
+    
+    /// 开启重连计时器
+    /// </summary>
+    /// <param name="delay">尝试重连的时间间隔</param>
+    /// <returns></returns>
+    private void startReconnetTimer()
+    {
+        if (this.timer == null)
+        {
+            this.timer = new System.Timers.Timer(this.reconnetDelay);
+            this.timer.Elapsed += new System.Timers.ElapsedEventHandler(timeCompleteHandler);
+        }
+        this.timer.Start();
+    }
+
+    private void timeCompleteHandler(object sender, System.Timers.ElapsedEventArgs e)
+    {
+        this.timer.Stop();
+        MonoBehaviour.print("重连");
+        this.connect(this.host, this.port);
     }
 }
 

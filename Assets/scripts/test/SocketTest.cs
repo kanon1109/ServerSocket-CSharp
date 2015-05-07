@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using support;
 using UnityEngine.UI;
+using System;
 
 public class SocketTest : MonoBehaviour 
 {
@@ -13,7 +14,7 @@ public class SocketTest : MonoBehaviour
         NotificationCenter.getInstance().addObserver("22", testHandler2);
 
         ss = new ServerSocket();
-        ss.connectServer("127.0.0.1", 8000);
+        ss.connect("127.0.0.1", 8000);
 
         btn.onClick.AddListener(btnClickHandler);
 	}
