@@ -73,7 +73,7 @@ public class Buffer
     /// 读取一个字节
     /// </summary>
     /// <returns></returns>
-    public int readBytes()
+    public int readByte()
     {
         return this.ms.ReadByte();
     }
@@ -101,6 +101,19 @@ public class Buffer
         ms.Read(bytes, 0, len);
         String str = Encoding.UTF8.GetString(bytes);
         return str;
+    }
+
+
+    /// <summary>
+    /// 根据长度读取一个bytes[]
+    /// </summary>
+    /// <param name="len">长度</param>
+    /// <returns>一个bytes[]</returns>
+    public Byte[] readData(int len)
+    {
+        Byte[] bytes = new Byte[len];
+        ms.Read(bytes, 0, len);
+        return bytes;
     }
 
     /// <summary>

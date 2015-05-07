@@ -238,7 +238,8 @@ public class ServerSocket
             this.socket.Connected)
             this.socket.Disconnect(true);
     }
-    
+
+    /// <summary>
     /// 开启重连计时器
     /// </summary>
     /// <param name="delay">尝试重连的时间间隔</param>
