@@ -38,6 +38,7 @@ public class ServerSocket
     /// <returns></returns>
     public void connect(String host, int port)
     {
+        if (this.socket != null && this.socket.Connected) return;
         this.host = host;
         this.port = port;
         if (this.socket == null)
@@ -46,6 +47,18 @@ public class ServerSocket
         IPEndPoint endpoint = new IPEndPoint(address, port);
         //异步连接,连接成功调用connectCallback方法  
         this.socket.BeginConnect(endpoint, new AsyncCallback(connectCallback), this.socket);
+    }
+
+    /// <summary>
+    /// 根据域名链接
+    /// </summary>
+    /// <param name="domain">域名</param>
+    /// <param name="port">端口</param>
+    /// <returns></returns>
+    public void connectDomain(String domain, int port)
+    {
+        IPHostEntry ipHost = Dns.GetHostEntry(domain);
+        this.connect(ipHost.AddressList[0].ToString(), port);
     }
 
     private void receiveSocketHandler(IAsyncResult ar)

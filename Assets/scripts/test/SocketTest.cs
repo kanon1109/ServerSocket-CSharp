@@ -12,12 +12,18 @@ public class SocketTest : MonoBehaviour
     {
         NotificationCenter.getInstance().addObserver("11", testHandler1);
         NotificationCenter.getInstance().addObserver("22", testHandler2);
+        NotificationCenter.getInstance().addObserver("save", saveHandler);
 
         ss = new ServerSocket();
         ss.connect("127.0.0.1", 8000);
 
         btn.onClick.AddListener(btnClickHandler);
 	}
+
+    private void saveHandler(object param)
+    {
+        PlayerPrefs.SetString("key", "22");
+    }
 
     public void connect()
     {
@@ -37,8 +43,10 @@ public class SocketTest : MonoBehaviour
     private void testHandler2(object param)
     {
         Buffer buffer = param as Buffer;
-        print(buffer.readLengthAndString());
+        buffer.readLengthAndString();
         print(buffer.readInt());
+
+        NotificationCenter.getInstance().postNotification("save");
     }
 
     private void testHandler1(object param)
