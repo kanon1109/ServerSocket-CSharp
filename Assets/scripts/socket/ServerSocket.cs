@@ -179,7 +179,7 @@ public class ServerSocket
         headBuffer.wirteInt(buffer.length());
         //写入内容
         headBuffer.writeBytes(buffer.readStream().GetBuffer());
-        this.socket.Send(headBuffer.readStream().GetBuffer(), SocketFlags.None);
+        this.socket.Send(headBuffer.readStream().GetBuffer(), headBuffer.length(), SocketFlags.None);
     }
 
     /// <summary>
