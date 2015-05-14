@@ -44,8 +44,10 @@ public class SocketTest : MonoBehaviour
     private void testHandler1(object param)
     {
         Buffer buffer = param as Buffer;
-        print(buffer.readLengthAndString());
-        print(buffer.readInt());
+        String str = buffer.readLengthAndString();
+        int i = buffer.readInt();
+        //print(str);
+        //print(i);
     }
 
 	// Update is called once per frame

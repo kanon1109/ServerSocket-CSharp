@@ -13,8 +13,10 @@ public class ServerSocket
     private int port;
     //套接字
     private Socket socket = null;
-    //包头固定的长度
-    private int headSize = 4;
+    //包最小长度
+    private const int MIN_LENGTH = 4;
+    //缓冲区最大长度
+    private const int MAX_LENGTH = 8192;
     //包体的长度
     private int bodyLength = 0;
     //计时器
@@ -25,6 +27,8 @@ public class ServerSocket
     public static String CONNECTED = "connected";
     //socket连接关闭
     public static String DISCONNECT = "disconnect";
+    //缓冲区
+    private Buffer buffer = new Buffer();
     public ServerSocket()
     {
         
@@ -46,75 +50,6 @@ public class ServerSocket
         IPEndPoint endpoint = new IPEndPoint(address, port);
         //异步连接,连接成功调用connectCallback方法  
         this.socket.BeginConnect(endpoint, new AsyncCallback(connectCallback), this.socket);
-    }
-
-    private void receiveSocketHandler(IAsyncResult ar)
-    {
-        StateObject so = (StateObject)ar.AsyncState;
-        Socket socket = so.socket;
-        if (!socket.Connected)
-        {
-            MonoBehaviour.print("socket断开");
-            NotificationCenter.getInstance().postNotification(DISCONNECT);
-            this.disconnect();
-            this.startReconnetTimer();
-            return;
-        }
-        if (socket.Poll(-1, SelectMode.SelectRead) == true)
-        {
-            int read = socket.EndReceive(ar);
-            if (read == 0)
-            {
-                //socket 断开
-                MonoBehaviour.print("socket断开");
-                NotificationCenter.getInstance().postNotification(DISCONNECT);
-                this.disconnect();
-                this.startReconnetTimer();
-                return;
-            }
-            //如果不足包头的长度
-            if (read < this.headSize)
-            {
-
-            }
-            //socket.Available 这里的缓冲区长度是去掉头部后的长度
-            if (this.bodyLength == 0)
-            {
-                Buffer buffer = new Buffer();
-                buffer.writeStream(new MemoryStream(so.buffer));
-                this.bodyLength = buffer.readInt();
-            }
-            while (socket.Available > 0)
-            {
-                //||---头---||-----内容-----||;
-                //读包头
-                if (this.bodyLength == 0)
-                {
-                    byte[] headBuffer = new byte[this.headSize];
-                    socket.Receive(headBuffer, 0, headBuffer.Length, SocketFlags.None);
-                    Buffer headByteArray = new Buffer();
-                    headByteArray.writeStream(new MemoryStream(headBuffer));
-                    this.bodyLength = headByteArray.readInt();
-                    MonoBehaviour.print("this.bodyLength " + this.bodyLength);
-                }
-                if (socket.Available < this.bodyLength)
-                {
-                    //缓冲区不足 讲读出的头还回去，并且跳出循环。
-                    break;
-                }
-                if (this.bodyLength > 0 && this.socket.Available >= this.bodyLength)
-                {
-                    //读包体
-                    byte[] bodyBuffer = new byte[this.bodyLength];
-                    socket.Receive(bodyBuffer, 0, this.bodyLength, SocketFlags.None);
-                    this.receiveCallback(new MemoryStream(bodyBuffer));
-                    this.bodyLength = 0;
-                }
-                MonoBehaviour.print("socket.Available " + socket.Available);
-            }
-        }
-        //重新建立监听
-        this.socket.BeginReceive(so.buffer, 0, StateObject.BUFFER_SIZE, 0, new AsyncCallback(receiveSocketHandler), so);
     }
 
     /// <summary>
@@ -143,24 +78,95 @@ public class ServerSocket
         socket.EndConnect(ar);
     }
 
-    /// <summary>
-    /// 接收回调
-    /// </summary>
-    /// <param name="ms">数据流</param>
-    /// <returns></returns>
-    private void receiveCallback(MemoryStream ms)
+
+    private void receiveSocketHandler(IAsyncResult ar)
     {
-        //将ms中的包体的数据读出放入一个新的流中
-        byte[] bodyByte = new byte[this.bodyLength];
-        ms.Read(bodyByte, 0, this.bodyLength);
-        MemoryStream bodyMs = new MemoryStream(bodyByte);
-        bodyMs.Position = 0;
-        //再存入buffer里面 为了保证下一条数据顺利的读出
-        Buffer buffer = new Buffer();
-        buffer.writeStream(bodyMs);
-        int id = buffer.readInt(); //协议号
-        MonoBehaviour.print("id = " + id);
-        NotificationCenter.getInstance().postNotification(id.ToString(), buffer);
+        StateObject so = (StateObject)ar.AsyncState;
+        Socket socket = so.socket;
+        if (!socket.Connected)
+        {
+            MonoBehaviour.print("socket断开");
+            NotificationCenter.getInstance().postNotification(DISCONNECT);
+            this.disconnect();
+            this.startReconnetTimer();
+            return;
+        }
+        if (socket.Poll(-1, SelectMode.SelectRead) == true)
+        {
+            int read = socket.EndReceive(ar);
+            if (read == 0)
+            {
+                //socket 断开
+                MonoBehaviour.print("socket断开");
+                NotificationCenter.getInstance().postNotification(DISCONNECT);
+                this.disconnect();
+                this.startReconnetTimer();
+                return;
+            }
+            //讲先读出的数据放入缓冲区
+            this.buffer.writeBytes(so.buffer);
+            //MonoBehaviour.print("socket.Available " + socket.Available);
+            while (socket.Available > 0)
+            {
+                //写入的长度
+                int size;
+                if (socket.Available + this.buffer.length() > MAX_LENGTH)
+                    size = MAX_LENGTH - this.buffer.length();
+                else
+                    size = socket.Available;
+                //将socket缓冲区的数据放入自定义的缓冲区
+                Byte[] bytes = new Byte[size];
+                //MonoBehaviour.print("bytes.Length " + bytes.Length);
+                //MonoBehaviour.print("prev this.buffer.length() " + this.buffer.length());
+                socket.Receive(bytes, size, SocketFlags.None);
+                this.buffer.writeBytes(bytes);
+                //MonoBehaviour.print("next this.buffer.length() " + this.buffer.length());
+                //从buffer中取消息数据
+                this.getMessageFromBuffer();
+            }
+        }
+        //重新建立监听
+        this.socket.BeginReceive(so.buffer, 0, StateObject.BUFFER_SIZE, 0, new AsyncCallback(receiveSocketHandler), so);
+    }
+
+    /// <summary>
+    /// 从buffer中取消息数据
+    /// </summary>
+    /// <returns></returns>
+    private void getMessageFromBuffer()
+    {
+        //消息结构  {消息实体的长度(int)4位 消息实体body[协议号(int)4位 + 内容]}
+        int length = this.buffer.length();
+        //长度大于一条消息的最小值，取数据
+        while (length >= MIN_LENGTH)
+        {
+            //归0位才能从头开始读取
+            this.buffer.position = 0;
+            //这里的read 并不会将缓冲区数据读走 只是改变buffer的postion
+            //消息体长度
+            this.bodyLength = this.buffer.readInt();
+            //如果缓冲区剩余长度不足一条消息的长度则跳出，下次重新读去bodyLength(因为buffer的长度不会变，所以从头开始重新读);
+            if (length < MIN_LENGTH + this.bodyLength)
+            {
+                break;
+            }
+
+            Byte[] body = this.buffer.readBytesByLength(this.bodyLength);
+
+            Buffer bodyBuffer = new Buffer();
+            bodyBuffer.writeBytes(body);
+            bodyBuffer.position = 0;
+            //协议号
+            int pId = bodyBuffer.readInt();
+
+            //MonoBehaviour.print("协议号: " + pId);
+
+            NotificationCenter.getInstance().postNotification(pId.ToString(), bodyBuffer);
+
+            //从缓冲区中删除已经读取的数据
+            this.buffer.removeBytesByLength(MIN_LENGTH + bodyLength);
+            length -= MIN_LENGTH + bodyLength;
+        }
     }
 
     /// <summary>

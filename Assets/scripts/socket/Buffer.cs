@@ -5,10 +5,48 @@ public class Buffer
 {
     //数据流
     private MemoryStream ms;
+     //位置
+    public long position
+    {
+        get { return ms.Position; }
+        set { ms.Position = value; }
+    }
     public Buffer()
     {
         this.ms = new MemoryStream();
         this.ms.Position = 0;
+    }
+
+    /// <summary>
+    /// 根据长度从头部开始删除数据
+    /// </summary>
+    /// <param name="len">长度</param>
+    /// <returns></returns>
+    public void removeBytesByLength(int len)
+    {
+        int length = (int)(this.ms.Length);
+        //缓冲区长度小于等于删除的长度，释放全部缓冲区
+        if (length <= len)
+        {
+            this.ms.Dispose();
+            this.ms = new MemoryStream();
+            return;
+        }
+
+        //删除后剩余的长度
+        int count = length - len;
+
+        //读出删除后剩余的数据
+        Byte[] tempBytes = new Byte[length];
+        this.ms.Read(tempBytes, len - 1, count);
+
+        //保存新的缓冲区
+        Byte[] bytes = new Byte[count];
+        Array.Copy(tempBytes, len - 1, bytes, 0, count);
+
+        this.ms.Dispose();
+        this.ms = new MemoryStream();
+        this.ms.Write(bytes, 0, bytes.Length);
     }
 
     /// <summary>
@@ -110,7 +148,7 @@ public class Buffer
     /// </summary>
     /// <param name="len">长度</param>
     /// <returns>一个bytes[]</returns>
-    public Byte[] readData(int len)
+    public Byte[] readBytesByLength(int len)
     {
         Byte[] bytes = new Byte[len];
         ms.Read(bytes, 0, len);
