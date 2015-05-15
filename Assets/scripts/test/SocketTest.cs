@@ -29,7 +29,6 @@ public class SocketTest : MonoBehaviour
         Buffer buffer = new Buffer();
         buffer.wirteInt(33);
         buffer.writeChar((char)6);
-        buffer.writeLengthAndString("nmbsssss");
         ss.send(buffer);
     }
 

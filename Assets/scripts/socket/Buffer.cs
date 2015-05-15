@@ -289,6 +289,16 @@ public class Buffer
     }
 
     /// <summary>
+    /// 写入一个buffer
+    /// </summary>
+    /// <param name="buffer"></param>
+    /// <returns></returns>
+    public void writeBuffer(Buffer buffer)
+    {
+        this.ms.Write(buffer.readStream().GetBuffer(), 0, buffer.length());
+    }
+
+    /// <summary>
     /// 写入一个byte
     /// </summary>
     /// <param name="i"></param>

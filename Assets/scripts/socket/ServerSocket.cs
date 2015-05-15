@@ -184,7 +184,8 @@ public class ServerSocket
         Buffer headBuffer = new Buffer();
         headBuffer.wirteInt(buffer.length());
         //写入内容
-        headBuffer.writeBytes(buffer.readStream().GetBuffer());
+        //headBuffer.writeBytes(buffer.readStream().GetBuffer());
+        headBuffer.writeBuffer(buffer);
         this.socket.Send(headBuffer.readStream().GetBuffer(), headBuffer.length(), SocketFlags.None);
     }
 
