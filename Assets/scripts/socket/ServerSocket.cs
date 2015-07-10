@@ -163,7 +163,7 @@ public class ServerSocket
 
             NotificationCenter.getInstance().postNotification(pId.ToString(), bodyBuffer);
 
-            //从缓冲区中删除已经读取的数据
+            //从缓冲区中删除已经读取的数据（删除的是一条完整的读取过的数据）
             this.buffer.removeBytesByLength(MIN_LENGTH + bodyLength);
             length -= MIN_LENGTH + bodyLength;
         }
