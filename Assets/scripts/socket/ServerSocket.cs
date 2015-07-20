@@ -1,10 +1,9 @@
 ﻿using System;
 using UnityEngine;
-using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using support;
-using System.Threading;
+using System.Collections.Generic;
 public class ServerSocket
 {
     //ip
@@ -29,9 +28,25 @@ public class ServerSocket
     public static String DISCONNECT = "disconnect";
     //缓冲区
     private Buffer buffer = new Buffer();
+    //存放消息体的列表
+    private List<S2CMessage> messageList = new List<S2CMessage>();
     public ServerSocket()
     {
         
+    }
+
+    /// <summary>
+    /// 迭代发送消息体
+    /// </summary>
+    /// <returns></returns>
+    public void update()
+    {
+        while(messageList.Count > 0)
+        {
+            S2CMessage message = messageList[0];
+            NotificationCenter.getInstance().postNotification("S2C", message);
+            messageList.RemoveAt(0);
+        }
     }
 
     /// <summary>
@@ -50,6 +65,18 @@ public class ServerSocket
         IPEndPoint endpoint = new IPEndPoint(address, port);
         //异步连接,连接成功调用connectCallback方法  
         this.socket.BeginConnect(endpoint, new AsyncCallback(connectCallback), this.socket);
+    }
+
+    /// <summary>
+    /// 根据域名链接
+    /// </summary>
+    /// <param name="domain">域名</param>
+    /// <param name="port">端口</param>
+    /// <returns></returns>
+    public void connectDomain(String domain, int port)
+    {
+        IPHostEntry ipHost = Dns.GetHostEntry(domain);
+        this.connect(ipHost.AddressList[0].ToString(), port);
     }
 
     /// <summary>
@@ -160,8 +187,10 @@ public class ServerSocket
             int pId = bodyBuffer.readInt();
 
             //MonoBehaviour.print("协议号: " + pId);
+            S2CMessage message = new S2CMessage(pId.ToString(), bodyBuffer);
 
-            NotificationCenter.getInstance().postNotification(pId.ToString(), bodyBuffer);
+            this.messageList.Add(message);
+            //NotificationCenter.getInstance().postNotification(pId.ToString(), bodyBuffer);
 
             //从缓冲区中删除已经读取的数据（删除的是一条完整的读取过的数据）
             this.buffer.removeBytesByLength(MIN_LENGTH + bodyLength);
